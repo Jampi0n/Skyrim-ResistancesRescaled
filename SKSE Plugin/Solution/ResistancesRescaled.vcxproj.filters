@@ -18,9 +18,15 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ResistancesRescaled.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SkyrimEdition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ResistancesRescaled.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{82bed68c-9f63-4138-924f-c2e0c22ddf3f}</ProjectGuid>
+    <ProjectGuid>{D833E117-9E64-441C-9F30-253B36B40642}</ProjectGuid>
     <RootNamespace>ResistancesRescaled</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -255,8 +255,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ResistancesRescaled.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ResistancesRescaled.h" />
     <ClInclude Include="SkyrimEdition.h" />
   </ItemGroup>
   <Choose>
