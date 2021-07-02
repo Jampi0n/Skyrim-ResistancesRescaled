@@ -3,6 +3,8 @@ Scriptname JRR_Core extends Quest
 
 import JRR_NativeFunctions
 
+bool initialized = false
+
 Actor property PlayerRef auto
 JRR_ModConfigurationMenu property MCMQuest auto
 Spell[] property DisplaySpells auto
@@ -14,6 +16,8 @@ int ID_FROST = 3
 int ID_SHOCK = 4
 int ID_ARMOR = 5
 int ID_POISON = 6
+
+bool property magicEffectPreview = true auto hidden
 
 ; Names of the actor values to be used with ModAV.
 string[] property actorValueName auto hidden
@@ -185,7 +189,11 @@ int Property avUpdated hidden
 	EndFunction
 EndProperty
 
-
+bool Property useIni hidden
+	bool Function Get()
+		return PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "useIni", false)
+	EndFunction
+EndProperty
 
 
 int[] property resistanceFormula auto hidden
@@ -243,18 +251,40 @@ Event OnInit()
 	; On first start read the armor scaling factor
 	armorScalingFactorValue = Game.GetGameSettingFloat("fArmorScalingFactor")
 	
+	initialized = true
 	Maintenance()
 	StartEffect()
 EndEvent
 
 function Maintenance()
-	; Reapply game settings.
-	Game.SetGameSettingFloat("fArmorBaseFactor", 0.0)
-	Game.SetGameSettingFloat("fPlayerMaxResistance", playerMaxResistanceValue)
-	Game.SetGameSettingFloat("fMaxArmorRating", maxArmorRatingValue)
-	Game.SetGameSettingFloat("fArmorScalingFactor", armorScalingFactorValue)
-	forceUpdate = true
-	RegisterForSingleUpdate(0.4) ; Safety mechanism in case the script stopped and update was not scheduled
+	if initialized
+		MCMQuest.Recalculate(ID_MAGIC)
+		MCMQuest.Recalculate(ID_ELEMENTAL)
+		MCMQuest.Recalculate(ID_ARMOR)
+		MCMQuest.Recalculate(ID_POISON)
+		if useIni
+			playerMaxResistanceValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "playerMaxResistance", 100.0)
+			maxArmorRatingValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "maxArmorRating", 100.0)
+			armorScalingFactorValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "armorScalingFactor", 0.12)
+			modEnabledValue = PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "enabled", true)
+			magicEffectPreview = PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "magicEffectPreview", true)
+		endif
+
+		if modEnabledValue
+			StartEffect()
+		else
+			FinishEffect()
+		endif
+		UpdateDisplayPerk()
+
+		; Reapply game settings.
+		Game.SetGameSettingFloat("fArmorBaseFactor", 0.0)
+		Game.SetGameSettingFloat("fPlayerMaxResistance", playerMaxResistanceValue)
+		Game.SetGameSettingFloat("fMaxArmorRating", maxArmorRatingValue)
+		Game.SetGameSettingFloat("fArmorScalingFactor", armorScalingFactorValue)
+		forceUpdate = true
+		RegisterForSingleUpdate(0.4) ; Safety mechanism in case the script stopped and update was not scheduled
+	endif
 endfunction
 
 function CalculateParameters(int formula, int resistanceID, int at0, int at100)
@@ -305,27 +335,34 @@ endfunction
 ; On every update, the player gets new abilities, which will have correct values.
 ; The abilities with old values are removed.
 function UpdateDisplayPerk()
-	if useSwapPerk
-		useSwapPerk = false
-		PlayerRef.RemovePerk(DisplayPerkSwap)
-		PlayerRef.AddPerk(DisplayPerk)
+	if magicEffectPreview && modEnabledValue
+		if useSwapPerk
+			useSwapPerk = false
+			PlayerRef.RemovePerk(DisplayPerkSwap)
+			PlayerRef.AddPerk(DisplayPerk)
+		else
+			useSwapPerk = true
+			PlayerRef.RemovePerk(DisplayPerk)
+			PlayerRef.AddPerk(DisplayPerkSwap)
+		endif
 	else
-		useSwapPerk = true
+		PlayerRef.RemovePerk(DisplayPerkSwap)
 		PlayerRef.RemovePerk(DisplayPerk)
-		PlayerRef.AddPerk(DisplayPerkSwap)
 	endif
 endfunction
 
 Event OnUpdate()
 	; First check if mod is still enabled.
-	bool enabled = data[26] ;modEnabledValue
+	bool enabled = modEnabledValue
 	data = JRR_MainLoop(PlayerRef, data, functionParameters, DisplaySpells)
 	if enabled
 		; Schedule next update.
 		RegisterForSingleUpdate(0.4)
-		int tmp = data[29]; avUpdated
-		if tmp != 32 ; ignore updates to damage resist
-			UpdateDisplayPerk()
+		int tmp = avUpdated
+		if tmp != 0 && magicEffectPreview
+			if tmp != 32; ignore updates to damage resist
+				UpdateDisplayPerk()
+			endif
 		endif
 	endif
 EndEvent

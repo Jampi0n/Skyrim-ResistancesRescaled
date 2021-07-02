@@ -24,6 +24,7 @@ int ID_ARMOR = 5
 int ID_POISON = 6
 
 int currentResistanceID
+string[] resistanceName
 
 Event OnConfigInit()
 	int i = 0
@@ -44,12 +45,21 @@ Event OnConfigInit()
 	resistanceReduction100Button = new int[7]
 	resistanceEnabledTooltip = new string[7]
 	resistanceFormulaButton = new int[7]
+	resistanceName = new string[7]
 	while i < 7
 		resistanceEnabledButton[i] = 0
 		resistanceReduction0Button[i] = 0
 		resistanceReduction100Button[i] = 0
 		i += 1
 	endwhile
+
+	resistanceName[ID_MAGIC] = "Magic"
+	resistanceName[ID_ELEMENTAL] = "Elemental"
+	resistanceName[ID_FIRE] = "Fire"
+	resistanceName[ID_FROST] = "Frost"
+	resistanceName[ID_SHOCK] = "Shock"
+	resistanceName[ID_ARMOR] = "Armor"
+	resistanceName[ID_POISON] = "Poison"
 	
 	resistanceEnabledTooltip[ID_MAGIC] = "Toggles whether the mod affects magic resistance."
 	resistanceEnabledTooltip[ID_ELEMENTAL] = "Toggles whether the mod affects elemental (fire, frost and shock) resistances."
@@ -92,6 +102,7 @@ endfunction
 
 
 int modEnabledButton = 0
+int magicEffectPreviewButton = 0
 
 int[] resistanceEnabledButton
 string[] resistanceEnabledTooltip
@@ -122,7 +133,11 @@ event OnOptionHighlight(int option)
 	int i = 0
 	bool break = false
 	if option == modEnabledButton
-		SetInfoText("Toggles whether rescaling is enabled.")
+		SetInfoText("Enable/Disable the mod.")
+		return
+	endif
+	if option == magicEffectPreviewButton
+		SetInfoText("Shows current resistances in active magic effects. Shows resistances regardless of whether rescaling is enabled for them.")
 		return
 	endif
 	if option == playerMaxResistanceButton
@@ -258,10 +273,25 @@ function UpdatePreviewText(int resistanceID)
 endfunction
 
 function Recalculate(int resistanceID)
+	if coreScript.useIni
+		coreScript.resistanceEnabledValue[currentResistanceID] = PapyrusIni.ReadBool("ResistancesRescaled.ini", resistanceName[currentResistanceID], "enabled", true)
+		coreScript.resistanceFormula[resistanceID] = PapyrusIni.ReadInt("ResistancesRescaled.ini", resistanceName[resistanceID], "formula", 0)
+		coreScript.resistanceReduction0Value[resistanceID] = PapyrusIni.ReadInt("ResistancesRescaled.ini", resistanceName[resistanceID], "at0", 0)
+	endif
+	
 	if resistanceID == ID_ARMOR
+		if coreScript.useIni
+			coreScript.resistanceReduction100Value[resistanceID] = PapyrusIni.ReadInt("ResistancesRescaled.ini", resistanceName[resistanceID], "at1000", 75)
+		endif
 		coreScript.CalculateArmorParameters(coreScript.resistanceFormula[resistanceID], coreScript.resistanceReduction0Value[resistanceID], coreScript.resistanceReduction100Value[resistanceID])
 	else
-		coreScript.CalculateParameters(coreScript.resistanceFormula[resistanceID], resistanceID, coreScript.resistanceReduction0Value[resistanceID], coreScript.resistanceReduction100Value[resistanceID])
+		if coreScript.useIni
+			coreScript.resistanceReduction100Value[resistanceID] = PapyrusIni.ReadInt("ResistancesRescaled.ini", resistanceName[resistanceID], "at100", 75)
+		endif
+		int formula = coreScript.resistanceFormula[resistanceID]
+		int at0 = coreScript.resistanceReduction0Value[resistanceID]
+		int at100 = coreScript.resistanceReduction100Value[resistanceID]
+		coreScript.CalculateParameters(formula, resistanceID, at0, at100)
 	endif
 endfunction
 
@@ -373,6 +403,7 @@ event OnPageReset(string page)
 	elseif page == Pages[5]
 		AddHeaderOption("$Advanced")
 		modEnabledButton = AddToggleOption("$RescalingEnabled", coreScript.modEnabledValue)
+		magicEffectPreviewButton = AddToggleOption("$MagicEffectPreview", coreScript.magicEffectPreview)
 		uninstallInformationButton = AddTextOption("$Information", "")
 		AddHeaderOption("$GameSettings")
 		playerMaxResistanceButton = AddSliderOption("$MagicReductionCap", (coreScript.playerMaxResistanceValue) as int, "{0}%" )
@@ -415,11 +446,21 @@ endEvent
 event  OnOptionSliderAccept(int option, float value)
 	if option == resistanceReduction0Button[currentResistanceID]
 		coreScript.resistanceReduction0Value[currentResistanceID] = value as int
+		if coreScript.useIni
+			PapyrusIni.WriteInt("ResistancesRescaled.ini", resistanceName[currentResistanceID], "at0", value as int)
+		endif
 		SetSliderOptionValue(option, value, "{0}%")
 		Recalculate(currentResistanceID)
 		UpdatePreviewText(currentResistanceID)
 	elseif option == resistanceReduction100Button[currentResistanceID]
 		coreScript.resistanceReduction100Value[currentResistanceID] = value as int
+		if coreScript.useIni
+			if currentResistanceID == ID_ARMOR
+				PapyrusIni.WriteInt("ResistancesRescaled.ini", resistanceName[currentResistanceID], "at1000", value as int)
+			else
+				PapyrusIni.WriteInt("ResistancesRescaled.ini", resistanceName[currentResistanceID], "at100", value as int)
+			endif
+		endif
 		SetSliderOptionValue(option, value, "{0}%")
 		Recalculate(currentResistanceID)
 		UpdatePreviewText(currentResistanceID)
@@ -427,14 +468,23 @@ event  OnOptionSliderAccept(int option, float value)
 
 	if(option == playerMaxResistanceButton)
 		coreScript.playerMaxResistanceValue = value
+		if coreScript.useIni
+			PapyrusIni.WriteFloat("ResistancesRescaled.ini", "General", "playerMaxResistance", value)
+		endif
 		SetSliderOptionValue(option, value, "{0}%")
 		Game.SetGameSettingFloat("fPlayerMaxResistance", coreScript.playerMaxResistanceValue)
 	elseif(option == maxArmorRatingButton)
 		coreScript.maxArmorRatingValue = value
+		if coreScript.useIni
+			PapyrusIni.WriteFloat("ResistancesRescaled.ini", "General", "maxArmorRating", value)
+		endif
 		SetSliderOptionValue(option, value, "{0}%")
 		Game.SetGameSettingFloat("fMaxArmorRating", coreScript.maxArmorRatingValue)
 	elseif(option == armorScalingFactorButton)
 		coreScript.armorScalingFactorValue = value
+		if coreScript.useIni
+			PapyrusIni.WriteFloat("ResistancesRescaled.ini", "General", "armorScalingFactor", value)
+		endif
 		SetSliderOptionValue(option, value, "{3}")
 		Game.SetGameSettingFloat("fArmorScalingFactor", coreScript.armorScalingFactorValue)
 		coreScript.CalculateArmorParameters(coreScript.resistanceFormula[ID_ARMOR], coreScript.resistanceReduction0Value[ID_ARMOR], coreScript.resistanceReduction100Value[ID_ARMOR])
@@ -444,6 +494,9 @@ endEvent
 event OnOptionSelect(int option)
 	if option == resistanceEnabledButton[currentResistanceID]
 		coreScript.resistanceEnabledValue[currentResistanceID] = !coreScript.resistanceEnabledValue[currentResistanceID]
+		if coreScript.useIni
+			PapyrusIni.WriteBool("ResistancesRescaled.ini", resistanceName[currentResistanceID], "enabled", coreScript.resistanceEnabledValue[currentResistanceID])
+		endif
 		SetToggleOptionValue(option, coreScript.resistanceEnabledValue[currentResistanceID])
 		int bit = 0
 		if currentResistanceID == ID_MAGIC
@@ -463,15 +516,23 @@ event OnOptionSelect(int option)
 		endif
 		
 		coreScript.ResetToVanilla(currentResistanceID)
-	endif
-	if option == modEnabledButton
+	elseif option == modEnabledButton
 		coreScript.modEnabledValue = !coreScript.modEnabledValue
+		if coreScript.useIni
+			PapyrusIni.WriteBool("ResistancesRescaled.ini", "General", "enabled", coreScript.modEnabledValue)
+		endif
 		SetToggleOptionValue(option, coreScript.modEnabledValue)
 		if coreScript.modEnabledValue
 			coreScript.StartEffect()
 		else
 			coreScript.FinishEffect()
 		endif
+	elseif option == magicEffectPreviewButton
+		coreScript.magicEffectPreview = !coreScript.magicEffectPreview
+		if coreScript.useIni
+			PapyrusIni.WriteBool("ResistancesRescaled.ini", "General", "magicEffectPreview", coreScript.magicEffectPreview)
+		endif
+		SetToggleOptionValue(option, coreScript.magicEffectPreview)
 	endif
 endEvent
 
@@ -488,6 +549,9 @@ event OnOptionMenuAccept(int option, int index)
 	if option == resistanceFormulaButton[currentResistanceID]
 		SetMenuOptionValue(option, formulaName[index])
 		coreScript.resistanceFormula[currentResistanceID] = index
+		if coreScript.useIni
+			PapyrusIni.WriteInt("ResistancesRescaled.ini", resistanceName[currentResistanceID], "formula", index)
+		endif
 		Recalculate(currentResistanceID)
 		UpdatePreviewText(currentResistanceID)
 		return
@@ -497,6 +561,7 @@ endEvent
 event OnConfigClose()
 	; Force update in case rescale parameters were changed.
 	coreScript.forceUpdate = true
+	coreScript.UpdateDisplayPerk()
 endEvent
 
 event OnGameReload()
@@ -523,11 +588,6 @@ event OnVersionUpdate(int newVer)
 	
 		Debug.Notification("[RR]: Updating from  "+GetVersionName(CurrentVersion)+" to "+GetVersionName(newVer))
 		Debug.Trace("[RR]: Updating from  "+GetVersionName(CurrentVersion)+" to "+GetVersionName(newVer))
-		
-		Recalculate(ID_MAGIC)
-		Recalculate(ID_ELEMENTAL)
-		Recalculate(ID_ARMOR)
-		Recalculate(ID_POISON)
 		
 	elseif(newVer < CurrentVersion)
 		Debug.Notification("[MMR]: Downgrading from  "+GetVersionName(CurrentVersion)+" to "+GetVersionName(newVer))
