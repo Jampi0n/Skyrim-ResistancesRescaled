@@ -1,0 +1,4 @@
+Scripts/*.pex
+.vscode
+Papyrus.ppj
+Papyrus.code-workspace

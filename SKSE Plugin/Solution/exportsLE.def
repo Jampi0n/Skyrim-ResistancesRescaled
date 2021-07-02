@@ -1,0 +1,4 @@
+LIBRARY	"ResistancesRescaledLE"
+EXPORTS
+SKSEPlugin_Query
+SKSEPlugin_Load

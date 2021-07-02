@@ -1,0 +1,8 @@
+{
+	"identifier": "ResistancesRescaled",
+	"dll": "ResistancesRescaled",
+	"name": "Resistances Rescaled",
+	"version": "3.0.0",
+	"output": "Resistances Rescaled (dev)",
+	"esp": "ResistancesRescaled.esp"
+}
