@@ -5,15 +5,10 @@ using System.IO;
 using Noggog;
 using Newtonsoft.Json.Linq;
 
-namespace MyMod
+namespace ResistancesRescaled
 {
     class Program
     {
-		static void EditMod(SkyrimMod mod, SkyrimRelease release)
-		{
-			// Your code here
-		}
-		
         static bool DirectoryContainsFile(string directory, string fileName)
         {
             var files = Directory.GetFiles(directory, fileName);
@@ -47,7 +42,7 @@ namespace MyMod
 
 
             var mod = new SkyrimMod(ModKey.FromNameAndExtension(Path.GetFileName(pluginPath)), release);
-			EditMod(mod, release);
+            ResistancesRescaled.EditMod(mod, release);
 
             Directory.CreateDirectory(modPath + "\\" + output);
             mod.WriteToBinaryParallel(pluginPath);
