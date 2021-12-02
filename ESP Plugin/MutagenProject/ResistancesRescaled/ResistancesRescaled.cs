@@ -103,6 +103,13 @@ namespace ResistancesRescaled {
         }
 
         public static void EditMod(SkyrimMod mod, SkyrimRelease release) {
+            if(release == SkyrimRelease.SkyrimSE) {
+                mod.ModHeader.Flags |= SkyrimModHeader.HeaderFlag.LightMaster;
+            }
+
+            mod.ModHeader.Author = "Jampion";
+            mod.ModHeader.Description = "Resistances Rescaled 3.0.0";
+
             swapLength = 2;
 
             var resistanceTypes = new ResistanceType[7];
@@ -176,6 +183,7 @@ namespace ResistancesRescaled {
             mcmQuest.VirtualMachineAdapter = new QuestAdapter();
             mcmQuest.VirtualMachineAdapter.Scripts.Add(mcmScript);
             mcmQuest.VirtualMachineAdapter.Aliases.Add(playerAliasFragment);
+            mcmQuest.VirtualMachineAdapter.Unknown = 2;
 
             var coreScript = new ScriptEntry {
                 Name = "JRR_Core"
