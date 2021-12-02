@@ -189,12 +189,7 @@ int Property avUpdated hidden
 	EndFunction
 EndProperty
 
-bool Property useIni hidden
-	bool Function Get()
-		return PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "useIni", false)
-	EndFunction
-EndProperty
-
+bool Property useIni = false auto hidden
 
 int[] property resistanceFormula auto hidden
 
@@ -262,6 +257,7 @@ function Maintenance()
 		MCMQuest.Recalculate(ID_ELEMENTAL)
 		MCMQuest.Recalculate(ID_ARMOR)
 		MCMQuest.Recalculate(ID_POISON)
+		useIni = PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "useIni", false)
 		if useIni
 			playerMaxResistanceValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "playerMaxResistance", 100.0)
 			maxArmorRatingValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "maxArmorRating", 100.0)
