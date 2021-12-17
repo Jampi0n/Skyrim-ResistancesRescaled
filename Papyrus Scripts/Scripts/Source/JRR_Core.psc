@@ -3,6 +3,71 @@ Scriptname JRR_Core extends Quest
 
 import JRR_NativeFunctions
 
+
+string modName = "ResistancesRescaled"
+string fileName = "MCM\\Config\\ResistancesRescaled\\settings.ini"
+string fileNameUser = "MCM\\Settings\\ResistancesRescaled.ini"
+
+
+bool function ReadBool(string category, string id, bool default, bool current)
+	if mcmHelperVersion >= requiredMcmHelperVersion
+		return MCM.GetModSettingBool(modName, "b" + id + ":" + category)
+	elseif papyrusIniVersion >= requiredPapyrusIniVersion
+		return BufferedIni.ReadBoolEx(fileName, fileNameUser, category, "b" + id, default)
+	else
+		return current
+	endif
+endfunction
+
+int function ReadInt(string category, string id, int default, int current)
+	if mcmHelperVersion >= requiredMcmHelperVersion
+		return MCM.GetModSettingInt(modName, "i" + id + ":" + category)
+	elseif papyrusIniVersion >= requiredPapyrusIniVersion
+		return BufferedIni.ReadIntEx(fileName, fileNameUser, category, "i" + id, default)
+	else
+		return current
+	endif
+endfunction
+
+float function ReadFloat(string category, string id, float default, float current)
+	if mcmHelperVersion >= requiredMcmHelperVersion
+		return MCM.GetModSettingFloat(modName, "f" + id + ":" + category)
+	elseif papyrusIniVersion >= requiredPapyrusIniVersion
+		return BufferedIni.ReadFloatEx(fileName, fileNameUser, category, "f" + id, default)
+	else
+		return current
+	endif
+endfunction
+
+function WriteBool(string category, string id, bool value)
+	if mcmHelperVersion >= requiredMcmHelperVersion
+		MCM.SetModSettingBool(modName, "b" + id + ":" + category, value)
+	elseif papyrusIniVersion >= requiredPapyrusIniVersion
+    	PapyrusIni.WriteBool(fileNameUser, category, "b" + id, value as int)
+	endif
+endfunction
+
+function WriteInt(string category, string id, int value)
+	if mcmHelperVersion >= requiredMcmHelperVersion
+		MCM.SetModSettingInt(modName, "i" + id + ":" + category, value)
+	elseif papyrusIniVersion >= requiredPapyrusIniVersion
+    	PapyrusIni.WriteInt(fileNameUser, category, "i" + id, value)
+	endif
+endfunction
+
+function WriteFloat(string category, string id, float value)
+	if mcmHelperVersion >= requiredMcmHelperVersion
+		MCM.SetModSettingFloat(modName, "f" + id + ":" + category, value)
+	elseif papyrusIniVersion >= requiredPapyrusIniVersion
+    	PapyrusIni.WriteFloat(fileNameUser, category, "f" + id, value)
+	endif
+endfunction
+
+int papyrusIniVersion = 0
+int mcmHelperVersion = 0
+int requiredPapyrusIniVersion = 1
+int requiredMcmHelperVersion = 1
+
 bool initialized = false
 
 Actor property PlayerRef auto
@@ -21,6 +86,9 @@ bool property magicEffectPreview = true auto hidden
 
 ; Names of the actor values to be used with ModAV.
 string[] property actorValueName auto hidden
+
+; Names of the resistances in the MCM and Config File
+string[] property resistanceName auto hidden
 
 ; Function parameters for the rescale function (max,a,c).
 float[] property functionParameters auto hidden
@@ -189,7 +257,7 @@ int Property avUpdated hidden
 	EndFunction
 EndProperty
 
-bool Property useIni = false auto hidden
+bool Property syncSettings = false auto hidden
 
 int[] property resistanceFormula auto hidden
 
@@ -210,12 +278,21 @@ Event OnInit()
 	resistanceReduction100Value = new int[7]
 	resistanceFormula = new int[7]
 	actorValueName = new string[7]
-	actorValueName[0] = "MagicResist"
-	actorValueName[2] = "FireResist"
-	actorValueName[3] = "FrostResist"
-	actorValueName[4] = "ElectricResist"
-	actorValueName[5] = "DamageResist"
-	actorValueName[6] = "PoisonResist"
+	resistanceName = new string[7]
+	actorValueName[ID_MAGIC] = "MagicResist"
+	actorValueName[ID_FIRE] = "FireResist"
+	actorValueName[ID_FROST] = "FrostResist"
+	actorValueName[ID_SHOCK] = "ElectricResist"
+	actorValueName[ID_ARMOR] = "DamageResist"
+	actorValueName[ID_POISON] = "PoisonResist"
+
+	resistanceName[ID_MAGIC] = "Magic"
+	resistanceName[ID_ELEMENTAL] = "Elemental"
+	resistanceName[ID_FIRE] = "Fire"
+	resistanceName[ID_FROST] = "Frost"
+	resistanceName[ID_SHOCK] = "Shock"
+	resistanceName[ID_ARMOR] = "Armor"
+	resistanceName[ID_POISON] = "Poison"
 	i = 0
 	while i < 7
 		resistanceEnabledValue[i] = true
@@ -248,30 +325,46 @@ Event OnInit()
 	
 	initialized = true
 	Maintenance()
-	StartEffect()
 EndEvent
+
+function Recalculate(int resistanceID, bool readFromFile = false)
+	if readFromFile
+		resistanceEnabledValue[resistanceID] = ReadBool(resistanceName[resistanceID], "Enabled", true, resistanceEnabledValue[resistanceID])
+		resistanceFormula[resistanceID] = ReadInt(resistanceName[resistanceID], "Formula", 0, resistanceFormula[resistanceID])
+		resistanceReduction0Value[resistanceID] = ReadInt(resistanceName[resistanceID], "At0", 0, resistanceReduction0Value[resistanceID])
+	endif
+	
+	if resistanceID == ID_ARMOR
+		if readFromFile
+			resistanceReduction100Value[resistanceID] = ReadInt(resistanceName[resistanceID], "At1000", 75, resistanceReduction100Value[resistanceID])
+		endif
+		CalculateArmorParameters(resistanceFormula[resistanceID], resistanceReduction0Value[resistanceID], resistanceReduction100Value[resistanceID])
+	else
+		if readFromFile
+			resistanceReduction100Value[resistanceID] = ReadInt(resistanceName[resistanceID], "At100", 75, resistanceReduction100Value[resistanceID])
+		endif
+		CalculateParameters(resistanceFormula[resistanceID], resistanceID,  resistanceReduction0Value[resistanceID], resistanceReduction100Value[resistanceID])
+	endif
+endfunction
+
 
 function Maintenance()
 	if initialized
-		MCMQuest.Recalculate(ID_MAGIC)
-		MCMQuest.Recalculate(ID_ELEMENTAL)
-		MCMQuest.Recalculate(ID_ARMOR)
-		MCMQuest.Recalculate(ID_POISON)
-		useIni = PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "useIni", false)
-		if useIni
-			playerMaxResistanceValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "playerMaxResistance", 100.0)
-			maxArmorRatingValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "maxArmorRating", 100.0)
-			armorScalingFactorValue = PapyrusIni.ReadFloat("ResistancesRescaled.ini", "General", "armorScalingFactor", 0.12)
-			modEnabledValue = PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "enabled", true)
-			magicEffectPreview = PapyrusIni.ReadBool("ResistancesRescaled.ini", "General", "magicEffectPreview", true)
-		endif
+		papyrusIniVersion = PapyrusIni.GetPluginVersion()
+		mcmHelperVersion = MCM.GetVersionCode()
 
-		if modEnabledValue
-			StartEffect()
-		else
-			FinishEffect()
-		endif
-		UpdateDisplayPerk()
+		; Read settings from file (also writes defaukt values for any settings that do not exist)
+		playerMaxResistanceValue = ReadFloat("General", "PlayerMaxResistance", 100.0, playerMaxResistanceValue)
+		maxArmorRatingValue = ReadFloat("General", "MaxArmorRating", 100.0, maxArmorRatingValue)
+		armorScalingFactorValue = ReadFloat("General", "ArmorScalingFactor", 0.12, armorScalingFactorValue)
+		modEnabledValue = ReadBool("General", "Enabled", true, modEnabledValue)
+		magicEffectPreview = ReadBool("General", "MagicEffectPreview", true, magicEffectPreview)
+		Recalculate(ID_MAGIC, true)
+		Recalculate(ID_ELEMENTAL, true)
+		Recalculate(ID_ARMOR, true)
+		Recalculate(ID_POISON, true)
+		BufferedIni.CloseBuffer(fileName)
+		BufferedIni.CloseBuffer(fileNameUser)
 
 		; Reapply game settings.
 		Game.SetGameSettingFloat("fArmorBaseFactor", 0.0)
@@ -279,6 +372,13 @@ function Maintenance()
 		Game.SetGameSettingFloat("fMaxArmorRating", maxArmorRatingValue)
 		Game.SetGameSettingFloat("fArmorScalingFactor", armorScalingFactorValue)
 		forceUpdate = true
+
+		if modEnabledValue
+			StartEffect()
+		else
+			FinishEffect()
+		endif
+		UpdateDisplayPerk()
 		RegisterForSingleUpdate(0.4) ; Safety mechanism in case the script stopped and update was not scheduled
 	endif
 endfunction
@@ -350,13 +450,14 @@ endfunction
 Event OnUpdate()
 	; First check if mod is still enabled.
 	bool enabled = modEnabledValue
+	bool tmpForceUpdate = forceUpdate
 	data = JRR_MainLoop(PlayerRef, data, functionParameters, DisplaySpells)
 	if enabled
 		; Schedule next update.
 		RegisterForSingleUpdate(0.4)
 		int tmp = avUpdated
-		if tmp != 0 && magicEffectPreview
-			if tmp != 32; ignore updates to damage resist
+		if magicEffectPreview
+			if (tmpForceUpdate || (tmp != 0 && tmp != 32 )) ; != 32 ignores updates to damage resist
 				UpdateDisplayPerk()
 			endif
 		endif

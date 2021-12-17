@@ -8,7 +8,59 @@
 static PluginHandle	g_pluginHandle = kPluginHandle_Invalid;
 static SKSEPapyrusInterface* g_papyrus = NULL;
 
+#if NEW_VERSION_CHECK
 extern "C" {
+	SKSEPluginVersionData SKSEPlugin_Version =
+	{
+		SKSEPluginVersionData::kVersion,
+		1,
+		MOD_NAME,
+		"Jampion",
+		"",
+		0,
+		{ COMPATIBLE_VERSION, 0 },
+		0,
+	};
+
+	bool SKSEPlugin_Query(const SKSEInterface* skse, PluginInfo* info) {
+		gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\" LOG_FILE);
+		gLog.SetPrintLevel(IDebugLog::kLevel_Error);
+		gLog.SetLogLevel(IDebugLog::kLevel_DebugMessage);
+		info->infoVersion = PluginInfo::kInfoVersion;
+		info->name = MOD_NAME;
+		info->version = 1;
+		_MESSAGE("This version of " MOD_NAME " is for a newer version of SKSE that uses the new plugin manager, but the running SKSE version still uses the old plugin manager.");
+		_MESSAGE("Make sure you use matching versions of SKSE and " MOD_NAME);
+		return false;
+	}
+
+	bool SKSEPlugin_Load(const SKSEInterface* skse) {	// Called by SKSE to load this plugin
+		gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\" LOG_FILE);
+		gLog.SetPrintLevel(IDebugLog::kLevel_Error);
+		gLog.SetLogLevel(IDebugLog::kLevel_DebugMessage);
+		_MESSAGE(MOD_NAME " loaded");
+
+		g_papyrus = (SKSEPapyrusInterface*)skse->QueryInterface(kInterface_Papyrus);
+
+		//Check if the function registration was a success...
+		bool btest = g_papyrus->Register(ResistancesRescaled::RegisterFuncs);
+
+		if (btest) {
+			_MESSAGE("Papyrus functions registered");
+		}
+
+		return true;
+	}
+};
+#else
+struct SKSEPluginVersionData {
+	int dummy;
+};
+extern "C" {
+	SKSEPluginVersionData SKSEPlugin_Version =
+	{
+		0
+	};
 
 	bool SKSEPlugin_Query(const SKSEInterface* skse, PluginInfo* info) {	// Called by SKSE to learn about this plugin and check that it's safe to load it
 		gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\" LOG_FILE);
@@ -32,7 +84,7 @@ extern "C" {
 
 			return false;
 		}
-		else if (skse->runtimeVersion < MINIMUM_VERSION || skse->runtimeVersion > MAXIMUM_VERSION)
+		else if (skse->runtimeVersion != COMPATIBLE_VERSION)
 		{
 			_MESSAGE("unsupported runtime version %08X", skse->runtimeVersion);
 
@@ -53,7 +105,7 @@ extern "C" {
 
 		//Check if the function registration was a success...
 		bool btest = g_papyrus->Register(ResistancesRescaled::RegisterFuncs);
-		
+
 		if (btest) {
 			_MESSAGE("Papyrus functions registered");
 		}
@@ -62,4 +114,5 @@ extern "C" {
 	}
 
 };
+#endif
 
