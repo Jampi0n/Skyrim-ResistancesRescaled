@@ -352,6 +352,7 @@ function Maintenance()
 	if initialized
 		papyrusIniVersion = PapyrusIni.GetPluginVersion()
 		mcmHelperVersion = MCM.GetVersionCode()
+		Debug.Trace("Resistances Rescaled: MCM Helper version = " + mcmHelperVersion + ", Papyrus Ini version = " + papyrusIniVersion)
 
 		; Read settings from file (also writes defaukt values for any settings that do not exist)
 		playerMaxResistanceValue = ReadFloat("General", "PlayerMaxResistance", 100.0, playerMaxResistanceValue)
@@ -363,8 +364,10 @@ function Maintenance()
 		Recalculate(ID_ELEMENTAL, true)
 		Recalculate(ID_ARMOR, true)
 		Recalculate(ID_POISON, true)
-		BufferedIni.CloseBuffer(fileName)
-		BufferedIni.CloseBuffer(fileNameUser)
+		if mcmHelperVersion < requiredMcmHelperVersion && papyrusIniVersion >= requiredPapyrusIniVersion
+			BufferedIni.CloseBuffer(fileName)
+			BufferedIni.CloseBuffer(fileNameUser)
+		endif
 
 		; Reapply game settings.
 		Game.SetGameSettingFloat("fArmorBaseFactor", 0.0)
