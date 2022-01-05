@@ -13,7 +13,7 @@ extern "C" {
 	SKSEPluginVersionData SKSEPlugin_Version =
 	{
 		SKSEPluginVersionData::kVersion,
-		1,
+		3,
 		MOD_NAME,
 		"Jampion",
 		"",
@@ -73,7 +73,7 @@ extern "C" {
 		// populate info structure
 		info->infoVersion = PluginInfo::kInfoVersion;
 		info->name = MOD_NAME;
-		info->version = 1;
+		info->version = 3;
 
 		// store plugin handle so we can identify ourselves later
 		g_pluginHandle = skse->GetPluginHandle();
