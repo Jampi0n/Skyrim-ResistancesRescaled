@@ -9,57 +9,57 @@ string fileName = "MCM\\Config\\ResistancesRescaled\\settings.ini"
 string fileNameUser = "MCM\\Settings\\ResistancesRescaled.ini"
 
 
-bool function ReadBool(string category, string id, bool default, bool current)
+bool function ReadBool(string settingName, bool default, bool current)
 	if mcmHelperVersion >= requiredMcmHelperVersion
-		return MCM.GetModSettingBool(modName, "b" + id + ":" + category)
+		return MCM.GetModSettingBool(modName,settingName)
 	elseif papyrusIniVersion >= requiredPapyrusIniVersion
-		return BufferedIni.ReadBoolEx(fileName, fileNameUser, category, "b" + id, default)
+		return BufferedIni.ReadBoolEx(fileName, fileNameUser, settingName, default)
 	else
 		return current
 	endif
 endfunction
 
-int function ReadInt(string category, string id, int default, int current)
+int function ReadInt(string settingName, int default, int current)
 	if mcmHelperVersion >= requiredMcmHelperVersion
-		return MCM.GetModSettingInt(modName, "i" + id + ":" + category)
+		return MCM.GetModSettingInt(modName, settingName)
 	elseif papyrusIniVersion >= requiredPapyrusIniVersion
-		return BufferedIni.ReadIntEx(fileName, fileNameUser, category, "i" + id, default)
+		return BufferedIni.ReadIntEx(fileName, fileNameUser, settingName, default)
 	else
 		return current
 	endif
 endfunction
 
-float function ReadFloat(string category, string id, float default, float current)
+float function ReadFloat(string settingName, float default, float current)
 	if mcmHelperVersion >= requiredMcmHelperVersion
-		return MCM.GetModSettingFloat(modName, "f" + id + ":" + category)
+		return MCM.GetModSettingFloat(modName, settingName)
 	elseif papyrusIniVersion >= requiredPapyrusIniVersion
-		return BufferedIni.ReadFloatEx(fileName, fileNameUser, category, "f" + id, default)
+		return BufferedIni.ReadFloatEx(fileName, fileNameUser, settingName, default)
 	else
 		return current
 	endif
 endfunction
 
-function WriteBool(string category, string id, bool value)
+function WriteBool(string settingName, bool value)
 	if mcmHelperVersion >= requiredMcmHelperVersion
-		MCM.SetModSettingBool(modName, "b" + id + ":" + category, value)
+		MCM.SetModSettingBool(modName, settingName, value)
 	elseif papyrusIniVersion >= requiredPapyrusIniVersion
-    	PapyrusIni.WriteBool(fileNameUser, category, "b" + id, value as int)
+    	PapyrusIni.WriteBool(fileNameUser, settingName, value as int)
 	endif
 endfunction
 
-function WriteInt(string category, string id, int value)
+function WriteInt(string settingName, int value)
 	if mcmHelperVersion >= requiredMcmHelperVersion
-		MCM.SetModSettingInt(modName, "i" + id + ":" + category, value)
+		MCM.SetModSettingInt(modName, settingName, value)
 	elseif papyrusIniVersion >= requiredPapyrusIniVersion
-    	PapyrusIni.WriteInt(fileNameUser, category, "i" + id, value)
+    	PapyrusIni.WriteInt(fileNameUser, settingName, value)
 	endif
 endfunction
 
-function WriteFloat(string category, string id, float value)
+function WriteFloat(string settingName, float value)
 	if mcmHelperVersion >= requiredMcmHelperVersion
-		MCM.SetModSettingFloat(modName, "f" + id + ":" + category, value)
+		MCM.SetModSettingFloat(modName, settingName, value)
 	elseif papyrusIniVersion >= requiredPapyrusIniVersion
-    	PapyrusIni.WriteFloat(fileNameUser, category, "f" + id, value)
+    	PapyrusIni.WriteFloat(fileNameUser, settingName, value)
 	endif
 endfunction
 
@@ -329,19 +329,19 @@ EndEvent
 
 function Recalculate(int resistanceID, bool readFromFile = false)
 	if readFromFile
-		resistanceEnabledValue[resistanceID] = ReadBool(resistanceName[resistanceID], "Enabled", true, resistanceEnabledValue[resistanceID])
-		resistanceFormula[resistanceID] = ReadInt(resistanceName[resistanceID], "Formula", 0, resistanceFormula[resistanceID])
-		resistanceReduction0Value[resistanceID] = ReadInt(resistanceName[resistanceID], "At0", 0, resistanceReduction0Value[resistanceID])
+		resistanceEnabledValue[resistanceID] = ReadBool("bEnabled:"+ resistanceName[resistanceID], true, resistanceEnabledValue[resistanceID])
+		resistanceFormula[resistanceID] = ReadInt("iFormula:" + resistanceName[resistanceID], 0, resistanceFormula[resistanceID])
+		resistanceReduction0Value[resistanceID] = ReadInt("iAt0:" + resistanceName[resistanceID], 0, resistanceReduction0Value[resistanceID])
 	endif
 	
 	if resistanceID == ID_ARMOR
 		if readFromFile
-			resistanceReduction100Value[resistanceID] = ReadInt(resistanceName[resistanceID], "At1000", 75, resistanceReduction100Value[resistanceID])
+			resistanceReduction100Value[resistanceID] = ReadInt("iAt1000:" + resistanceName[resistanceID], 75, resistanceReduction100Value[resistanceID])
 		endif
 		CalculateArmorParameters(resistanceFormula[resistanceID], resistanceReduction0Value[resistanceID], resistanceReduction100Value[resistanceID])
 	else
 		if readFromFile
-			resistanceReduction100Value[resistanceID] = ReadInt(resistanceName[resistanceID], "At100", 75, resistanceReduction100Value[resistanceID])
+			resistanceReduction100Value[resistanceID] = ReadInt("iAt100:" + resistanceName[resistanceID], 75, resistanceReduction100Value[resistanceID])
 		endif
 		CalculateParameters(resistanceFormula[resistanceID], resistanceID,  resistanceReduction0Value[resistanceID], resistanceReduction100Value[resistanceID])
 	endif
@@ -355,11 +355,11 @@ function Maintenance()
 		Debug.Trace("Resistances Rescaled: MCM Helper version = " + mcmHelperVersion + ", Papyrus Ini version = " + papyrusIniVersion)
 
 		; Read settings from file (also writes defaukt values for any settings that do not exist)
-		playerMaxResistanceValue = ReadFloat("General", "PlayerMaxResistance", 100.0, playerMaxResistanceValue)
-		maxArmorRatingValue = ReadFloat("General", "MaxArmorRating", 100.0, maxArmorRatingValue)
-		armorScalingFactorValue = ReadFloat("General", "ArmorScalingFactor", 0.12, armorScalingFactorValue)
-		modEnabledValue = ReadBool("General", "Enabled", true, modEnabledValue)
-		magicEffectPreview = ReadBool("General", "MagicEffectPreview", true, magicEffectPreview)
+		playerMaxResistanceValue = ReadFloat("fPlayerMaxResistance:General", 100.0, playerMaxResistanceValue)
+		maxArmorRatingValue = ReadFloat("fMaxArmorRating:General", 100.0, maxArmorRatingValue)
+		armorScalingFactorValue = ReadFloat("fArmorScalingFactor:General", 0.12, armorScalingFactorValue)
+		modEnabledValue = ReadBool("bEnabled:General", true, modEnabledValue)
+		magicEffectPreview = ReadBool("bMagicEffectPreview:General", true, magicEffectPreview)
 		Recalculate(ID_MAGIC, true)
 		Recalculate(ID_ELEMENTAL, true)
 		Recalculate(ID_ARMOR, true)

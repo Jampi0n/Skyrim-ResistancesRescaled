@@ -414,16 +414,16 @@ endEvent
 event  OnOptionSliderAccept(int option, float value)
 	if option == resistanceReduction0Button[currentResistanceID]
 		coreScript.resistanceReduction0Value[currentResistanceID] = value as int
-		coreScript.WriteInt(coreScript.resistanceName[currentResistanceID], "At0", value as int)
+		coreScript.WriteInt("iAt0:" + coreScript.resistanceName[currentResistanceID], value as int)
 		SetSliderOptionValue(option, value, "{0}%")
 		coreScript.Recalculate(currentResistanceID)
 		UpdatePreviewText(currentResistanceID)
 	elseif option == resistanceReduction100Button[currentResistanceID]
 		coreScript.resistanceReduction100Value[currentResistanceID] = value as int
 		if currentResistanceID == ID_ARMOR
-			coreScript.WriteInt(coreScript.resistanceName[currentResistanceID], "At1000", value as int)
+			coreScript.WriteInt("iAt1000:" + coreScript.resistanceName[currentResistanceID], value as int)
 		else
-			coreScript.WriteInt(coreScript.resistanceName[currentResistanceID], "At100", value as int)
+			coreScript.WriteInt("iAt100:" + coreScript.resistanceName[currentResistanceID], value as int)
 		endif
 		SetSliderOptionValue(option, value, "{0}%")
 		coreScript.Recalculate(currentResistanceID)
@@ -432,17 +432,17 @@ event  OnOptionSliderAccept(int option, float value)
 
 	if(option == playerMaxResistanceButton)
 		coreScript.playerMaxResistanceValue = value
-		coreScript.WriteFloat("General", "PlayerMaxResistance", value)
+		coreScript.WriteFloat("fPlayerMaxResistance:General", value)
 		SetSliderOptionValue(option, value, "{0}%")
 		Game.SetGameSettingFloat("fPlayerMaxResistance", coreScript.playerMaxResistanceValue)
 	elseif(option == maxArmorRatingButton)
 		coreScript.maxArmorRatingValue = value
-		coreScript.WriteFloat("General", "MaxArmorRating", value)
+		coreScript.WriteFloat("fMaxArmorRating:General", value)
 		SetSliderOptionValue(option, value, "{0}%")
 		Game.SetGameSettingFloat("fMaxArmorRating", coreScript.maxArmorRatingValue)
 	elseif(option == armorScalingFactorButton)
 		coreScript.armorScalingFactorValue = value
-		coreScript.WriteFloat("General", "ArmorScalingFactor", value)
+		coreScript.WriteFloat("fArmorScalingFactor:General", value)
 		SetSliderOptionValue(option, value, "{3}")
 		Game.SetGameSettingFloat("fArmorScalingFactor", coreScript.armorScalingFactorValue)
 		coreScript.CalculateArmorParameters(coreScript.resistanceFormula[ID_ARMOR], coreScript.resistanceReduction0Value[ID_ARMOR], coreScript.resistanceReduction100Value[ID_ARMOR])
@@ -452,7 +452,7 @@ endEvent
 event OnOptionSelect(int option)
 	if option == resistanceEnabledButton[currentResistanceID]
 		coreScript.resistanceEnabledValue[currentResistanceID] = !coreScript.resistanceEnabledValue[currentResistanceID]
-		coreScript.WriteBool(coreScript.resistanceName[currentResistanceID], "Enabled", coreScript.resistanceEnabledValue[currentResistanceID])
+		coreScript.WriteBool("bEnabled:" + coreScript.resistanceName[currentResistanceID], coreScript.resistanceEnabledValue[currentResistanceID])
 		SetToggleOptionValue(option, coreScript.resistanceEnabledValue[currentResistanceID])
 		int bit = 0
 		if currentResistanceID == ID_MAGIC
@@ -474,7 +474,7 @@ event OnOptionSelect(int option)
 		coreScript.ResetToVanilla(currentResistanceID)
 	elseif option == modEnabledButton
 		coreScript.modEnabledValue = !coreScript.modEnabledValue
-		coreScript.WriteBool("General", "Enabled", coreScript.modEnabledValue)
+		coreScript.WriteBool("bEnabled:General", coreScript.modEnabledValue)
 		SetToggleOptionValue(option, coreScript.modEnabledValue)
 		if coreScript.modEnabledValue
 			coreScript.StartEffect()
@@ -483,7 +483,7 @@ event OnOptionSelect(int option)
 		endif
 	elseif option == magicEffectPreviewButton
 		coreScript.magicEffectPreview = !coreScript.magicEffectPreview
-		coreScript.WriteBool("General", "MagicEffectPreview", coreScript.magicEffectPreview)
+		coreScript.WriteBool("bMagicEffectPreview:General", coreScript.magicEffectPreview)
 		SetToggleOptionValue(option, coreScript.magicEffectPreview)
 	endif
 endEvent
@@ -501,7 +501,7 @@ event OnOptionMenuAccept(int option, int index)
 	if option == resistanceFormulaButton[currentResistanceID]
 		SetMenuOptionValue(option, formulaName[index])
 		coreScript.resistanceFormula[currentResistanceID] = index
-		coreScript.WriteInt(coreScript.resistanceName[currentResistanceID], "Formula", index)
+		coreScript.WriteInt("iFormula:" + coreScript.resistanceName[currentResistanceID], index)
 		coreScript.Recalculate(currentResistanceID)
 		UpdatePreviewText(currentResistanceID)
 		return
