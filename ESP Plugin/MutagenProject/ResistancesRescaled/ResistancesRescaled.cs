@@ -24,12 +24,8 @@ namespace ResistancesRescaled {
             mEffect.MenuDisplayObject.SetTo(Skyrim.Static.MagicHatMarker);
             mEffect.Archetype.Type = MagicEffectArchetype.TypeEnum.Script;
             mEffect.Archetype.ActorValue = ActorValue.None;
-            mEffect.Flags = mEffect.Flags.
-                SetFlag(MagicEffect.Flag.Recover, true).
-                SetFlag(MagicEffect.Flag.NoHitEvent, true).
-                SetFlag(MagicEffect.Flag.NoDuration, true).
-                SetFlag(MagicEffect.Flag.NoArea, true).
-                SetFlag(MagicEffect.Flag.NoHitEffect, true);
+
+            mEffect.Flags = MagicEffect.Flag.Recover | MagicEffect.Flag.NoHitEvent | MagicEffect.Flag.NoDuration | MagicEffect.Flag.NoArea | MagicEffect.Flag.NoHitEffect | MagicEffect.Flag.DispelWithKeywords;
 
             mEffect.CastType = CastType.ConstantEffect;
             mEffect.Description = longName + ": <mag>" + (usePercentSymbol ? "%" : "");
@@ -247,6 +243,16 @@ namespace ResistancesRescaled {
             coreQuest.Flags = coreQuest.Flags.
                 SetFlag(Quest.Flag.StartGameEnabled, true).
                 SetFlag(Quest.Flag.RunOnce, true);
+
+            // Prevent effects being displayed multiple times in case of double perk bugs.
+            foreach(ResistanceType rType in resistanceTypes) {
+                if(rType != null) {
+                    Keyword kword = mod.Keywords.AddNew("JRR_DisplayEffectKeyword" + rType.shortName);
+                    rType.displayEffect.Keywords = new ExtendedList<IFormLinkGetter<IKeywordGetter>> {
+                    kword
+                };
+                }
+            }
         }
     }
 }
