@@ -345,6 +345,24 @@ function Recalculate(int resistanceID, bool readFromFile = false)
 		endif
 		CalculateParameters(resistanceFormula[resistanceID], resistanceID,  resistanceReduction0Value[resistanceID], resistanceReduction100Value[resistanceID])
 	endif
+
+	; update resistanceEnabledMask 
+	int bit = 0
+	if resistanceID == ID_MAGIC
+		bit = 0x1
+	elseif resistanceID == ID_ELEMENTAL
+		bit = 0x2
+	elseif resistanceID == ID_ARMOR
+		bit = 0x4
+	elseif resistanceID == ID_POISON
+		bit = 0x8
+	endif
+	
+	if resistanceEnabledValue[resistanceID]
+		resistanceEnabledMask = Math.LogicalOr(resistanceEnabledMask, bit)
+	else
+		resistanceEnabledMask = Math.LogicalAnd(resistanceEnabledMask, Math.LogicalNot(bit))
+	endif
 endfunction
 
 
