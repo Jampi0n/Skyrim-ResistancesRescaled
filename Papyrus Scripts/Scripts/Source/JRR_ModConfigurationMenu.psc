@@ -470,8 +470,6 @@ event OnOptionSelect(int option)
 		else
 			coreScript.resistanceEnabledMask = Math.LogicalAnd(coreScript.resistanceEnabledMask, Math.LogicalNot(bit))
 		endif
-		
-		coreScript.ResetToVanilla(currentResistanceID)
 	elseif option == modEnabledButton
 		coreScript.modEnabledValue = !coreScript.modEnabledValue
 		coreScript.WriteBool("bEnabled:General", coreScript.modEnabledValue)
@@ -511,7 +509,6 @@ endEvent
 event OnConfigClose()
 	; Force update in case rescale parameters were changed.
 	coreScript.forceUpdate = true
-	coreScript.UpdateDisplayPerk()
 endEvent
 
 event OnGameReload()

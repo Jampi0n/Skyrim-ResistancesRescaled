@@ -72,7 +72,9 @@ bool initialized = false
 
 Actor property PlayerRef auto
 JRR_ModConfigurationMenu property MCMQuest auto
-Spell[] property DisplaySpells auto
+Spell[] property SpellArray auto
+Perk[] Property PerkArray auto
+bool useSwapPerk = false
 
 int ID_MAGIC = 0
 int ID_ELEMENTAL = 1
@@ -82,7 +84,18 @@ int ID_SHOCK = 4
 int ID_ARMOR = 5
 int ID_POISON = 6
 
-bool property magicEffectPreview = true auto hidden
+GlobalVariable property JRR_MagicEffectPreviewGlobal auto
+
+bool property magicEffectPreview hidden
+	Function Set(bool newValue)
+		JRR_MagicEffectPreviewGlobal.SetValue(newValue as int)
+		UpdateDisplayPerk()
+	EndFunction
+	bool Function Get()
+		return JRR_MagicEffectPreviewGlobal.GetValue() as int
+	EndFunction
+EndProperty
+
 
 ; Names of the actor values to be used with ModAV.
 string[] property actorValueName auto hidden
@@ -112,10 +125,6 @@ float property maxArmorRatingValue = 100.0 auto hidden
 ; Holds the game settings: fArmorScalingFactor
 float property armorScalingFactorValue = 0.12 auto hidden
 
-Perk Property DisplayPerk auto
-Perk Property DisplayPerkSwap auto
-bool useSwapPerk = false
-
 ; The mod uses one big data array, which is used to interface with the SKSE plugin.
 ; Every value the SKSE plugin changes must be inside this array, since this is the only return value of the plugin.
 ; Array modification is not used in the SKSE plugin in order to make it easier to adapt the scripts to CommonLib, which cannot edit papyrus arrays.
@@ -138,13 +147,13 @@ int[] Property data auto hidden
 ; 18-20: poison
 ; 21: forceUpdate
 ; 22: updateRunning
-; 23: resetResistance
+; 23: -
 ; 24: updateMask (av group mask)
 ; 25: resistanceEnabledMask (av group mask)
 ; 26: modEnabledValue
-; 27: changed
-; 28: avRescaled (av mask)
-; 29: avReset (av mask)
+; 27: -
+; 28: -
+; 29: -
 ; 30: avUpdated (av mask)
 
 ; Whether the next update recalculates all resistances, even if vanilla resistances did not change. default = false
@@ -171,16 +180,6 @@ bool Property updateRunning hidden
 	EndFunction
 EndProperty
 
-; Bitwise representation of which resistances are supposed to be reset in the next update. default = 0x0
-; This property is used to disable rescaling for one or more resistances.
-int Property resetResistance hidden
-	Function Set(int newValue)
-		data[23] = newValue
-	EndFunction
-	int Function Get()
-		return data[23]
-	EndFunction
-EndProperty
 
 ; Resistances handled in the last update. default = 0xf
 ; This property is used by the mcm to determine how the My Resistances page looks like.
@@ -216,32 +215,6 @@ bool Property modEnabledValue hidden
 	EndFunction
 EndProperty
 
-; Which actor value were rescaled in the last update. default = 0x0
-; av mask for which resistances have been rescaled in the last update
-; all resistances are included, for which a new rescaled value was calculated, even if it was the same as before (e.g. due to forced update)
-; that means resistances for which rescaling is disabled will not be in the mask
-; this property is currently not used
-int Property avRescaled hidden
-	Function Set(int newValue)
-		data[27] = newValue
-	EndFunction
-	int Function Get()
-		return data[27]
-	EndFunction
-EndProperty
-
-; Which actor value were reset in the last update. default = 0x0
-; av mask for which resistances have been reset in the last update
-; this is generally the av mask corresponding to the av mask of resetResistance
-; this property is currently not used
-int Property avReset hidden
-	Function Set(int newValue)
-		data[28] = newValue
-	EndFunction
-	int Function Get()
-		return data[28]
-	EndFunction
-EndProperty
 
 ; Which actor value were updated in the last update. default = 0x0
 ; This includes external AV updates to any resistances covered by this mod, regardless of whether rescaling is enabled for them.
@@ -312,12 +285,9 @@ Event OnInit()
 	
 	forceUpdate = false
 	updateRunning = true
-	resetResistance = 0
 	updateMask = 0xf
 	resistanceEnabledMask = 0xf
 	modEnabledValue = true
-	avRescaled = 0x0
-	avReset = 0x0
 	avUpdated = 0x0
 	
 	; On first start read the armor scaling factor
@@ -399,7 +369,6 @@ function Maintenance()
 		else
 			FinishEffect()
 		endif
-		UpdateDisplayPerk()
 		RegisterForSingleUpdate(0.4) ; Safety mechanism in case the script stopped and update was not scheduled
 	endif
 endfunction
@@ -430,41 +399,25 @@ function FinishEffect()
 	modEnabledValue = false
 endfunction
 
-; Resets the resistance in the next update to vanilla.
-function ResetToVanilla(int resistanceID)
-	int bit = 0
-	if resistanceID == ID_MAGIC
-		bit = 0x1
-	elseif resistanceID == ID_ELEMENTAL
-		bit = 0x2
-	elseif resistanceID == ID_ARMOR
-		bit = 0x4
-	elseif resistanceID == ID_POISON
-		bit = 0x8
-	endif
-	resetResistance = Math.LogicalOr(resetResistance, bit)
-endfunction
-
-
 ; Updates the active effects to display correct resistance values
 ; Uses perks to minimize function calls
 ; A swap perk with swap spells is used in order to avoid timing problems.
 ; On every update, the player gets new abilities, which will have correct values.
 ; The abilities with old values are removed.
 function UpdateDisplayPerk()
-	if magicEffectPreview && modEnabledValue
+	if modEnabledValue
 		if useSwapPerk
 			useSwapPerk = false
-			PlayerRef.RemovePerk(DisplayPerkSwap)
-			PlayerRef.AddPerk(DisplayPerk)
+			PlayerRef.RemovePerk(PerkArray[0])
+			PlayerRef.AddPerk(PerkArray[1])
 		else
 			useSwapPerk = true
-			PlayerRef.RemovePerk(DisplayPerk)
-			PlayerRef.AddPerk(DisplayPerkSwap)
+			PlayerRef.RemovePerk(PerkArray[1])
+			PlayerRef.AddPerk(PerkArray[0])
 		endif
 	else
-		PlayerRef.RemovePerk(DisplayPerkSwap)
-		PlayerRef.RemovePerk(DisplayPerk)
+		PlayerRef.RemovePerk(PerkArray[0])
+		PlayerRef.RemovePerk(PerkArray[1])
 	endif
 endfunction
 
@@ -472,15 +425,14 @@ Event OnUpdate()
 	; First check if mod is still enabled.
 	bool enabled = modEnabledValue
 	bool tmpForceUpdate = forceUpdate
-	data = JRR_MainLoop(PlayerRef, data, functionParameters, DisplaySpells)
+	data = JRR_MainLoop(PlayerRef, data, functionParameters, SpellArray, PerkArray)
 	if enabled
 		; Schedule next update.
 		RegisterForSingleUpdate(0.4)
-		int tmp = avUpdated
-		if magicEffectPreview
-			if (tmpForceUpdate || (tmp != 0 && tmp != 32 )) ; != 32 ignores updates to damage resist
-				UpdateDisplayPerk()
-			endif
+		if (tmpForceUpdate || avUpdated > 0)
+			UpdateDisplayPerk()
 		endif
+	else
+		UpdateDisplayPerk()
 	endif
 EndEvent
